@@ -1,9 +1,9 @@
-import {css} from 'lit';
+import { css } from "lit";
 
 export default css`
-:host {
+  :host {
     display: block;
-    border: solid 1px gray;
     padding: 16px;
     max-width: 800px;
-}`;
+  }
+`;
