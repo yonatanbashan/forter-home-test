@@ -1,18 +1,23 @@
 import { LitElement, html } from "lit";
 import style from "./main-element.css.js";
+import postMessage from "../network/postMessage.js";
+import nameGenerator from "../business-logic/nameGenerator";
 import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
 
 export class MainElement extends LitElement {
   static get properties() {
     return {
       messages: { type: Array },
+      username: { type: String },
     };
   }
 
   constructor() {
     super();
     this.messages = [];
-    this.username = `User${Math.floor(Math.random() * 100000)}`;
+    nameGenerator().then((name) => {
+      this.username = name;
+    });
     this.socket = io("http://localhost:3000", {
       extraHeaders: {
         "Access-Control-Allow-Origin": "*",
@@ -28,32 +33,40 @@ export class MainElement extends LitElement {
 
   onKeyPress(e) {
     if (e.key === "Enter") {
-      fetch(
-        `http://localhost:3000/message?message=${encodeURIComponent(
-          e.target.value
-        )}&username=${this.username}`,
-        {
-          method: "POST",
-        }
-      );
+      postMessage(e.target.value, this.username);
       e.target.value = "";
     }
   }
 
+  onClickMessage() {
+    console.log("clicked!");
+  }
+
   render() {
-    const { name, count } = this;
+    const { messages, onKeyPress, onClickMessage } = this;
+    const usernameExist = this.username !== undefined;
+
+    if (!usernameExist) {
+      return html`Loading...`;
+    }
+
     return html`
-      <div>Your username is ${this.username}</div>
-      <div>Type your message here:</div>
-      <input type="text" @keypress="${this.onKeyPress}" />
-      <br /><br />
-      <div>Messages:</div>
+      <div class="container">
+        <div>Welcome - your username is ${this.username}</div>
+        <br />
+        <div>Chat here (click Enter to send):</div>
+        <input type="text" @keypress="${onKeyPress}" />
+        <br /><br />
+      </div>
+      <br />
       <div>
-        ${this.messages.map(({ message, username }) => {
-          const color = username === this.username ? "#dd3355" : "black";
-          return html`<div style="color: ${color}">
-            ${username}: ${message}
-          </div>`;
+        ${messages.map(({ message, username: messageUsername }) => {
+          return html`<message-element
+            username="${messageUsername}"
+            message="${message}"
+            ownUsername="${this.username}"
+            .onClick=${onClickMessage}
+          ></message-element>`;
         })}
       </div>
     `;
