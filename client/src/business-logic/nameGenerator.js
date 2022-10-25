@@ -66,7 +66,7 @@ const nouns = [
 
 export default async function nameGenerator() {
   const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
   const newUsername = `${adjective}${noun}`;
   return await addUsername(newUsername);
 }

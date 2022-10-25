@@ -1,7 +1,9 @@
 import express from "express";
 import httpServer from "http";
 import { Server } from "socket.io";
+import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
+import { isQuestion } from "./common.js";
 
 const app = express();
 
@@ -22,19 +24,37 @@ const io = new Server(http, {
 
 const usernames = [];
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.get("/upcount", (req, res) => {
-  io.emit("up");
-  res.status(200);
-});
+// Key = message body, content: array of replies with message body, username and message ID
+const replies = {};
 
 app.post("/message", (req, res) => {
-  const { message, username } = req.query;
-  io.emit("message", { message, username });
-  res.status(200);
+  const { message, username, replyToId, replyToMessage } = req.query;
+  const newId = uuidv4();
+
+  if (replyToMessage) {
+    const lowerCaseRepliedToMessage = replyToMessage.toLowerCase();
+    const existingReplies = replies[lowerCaseRepliedToMessage] ?? [];
+    if (isQuestion(replyToMessage)) {
+      const newReply = { message, username, id: newId, replyToId };
+      replies[lowerCaseRepliedToMessage] = [...existingReplies, newReply];
+    }
+    io.emit("message", { message, username, id: newId, replyToId });
+  } else {
+    io.emit("message", { message, username, id: newId });
+    const lowerCaseMessage = message.toLowerCase();
+    if (isQuestion(message) && replies[lowerCaseMessage]?.length > 0) {
+      const numOfReplies = replies[lowerCaseMessage].length;
+      const lastReply = replies[lowerCaseMessage][numOfReplies - 1];
+      const botReplyId = uuidv4();
+      io.emit("message", {
+        ...lastReply,
+        botMessage: true,
+        id: botReplyId,
+        replyToId: newId,
+      });
+    }
+  }
+  res.sendStatus(200);
 });
 
 app.post("/add_user", (req, res) => {
@@ -43,9 +63,12 @@ app.post("/add_user", (req, res) => {
     usernames.push(new_username);
     res.send({ username: new_username });
   } else {
-    for (let i = Math.floor(Math.random() * 1000); i < 1000; i++) {
-      const usernameWithNumber = `${new_username}_${i}`;
+    let usernameExists = true;
+    while (usernameExists) {
+      let i = Math.floor(Math.random() * 10000);
+      const usernameWithNumber = `${new_username}${i}`;
       if (!usernames.includes(usernameWithNumber)) {
+        usernameExists = false;
         usernames.push(usernameWithNumber);
         res.send({ username: usernameWithNumber });
         return;

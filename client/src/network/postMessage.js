@@ -1,10 +1,22 @@
-export default function postMessage(message, username) {
-  fetch(
-    `http://localhost:3000/message?message=${encodeURIComponent(
-      message
-    )}&username=${username}`,
-    {
-      method: "POST",
-    }
-  );
+export default function postMessage(
+  message,
+  username,
+  replyToMessage,
+  replyToId
+) {
+  const searchParams =
+    replyToMessage === undefined
+      ? new URLSearchParams({
+          username,
+          message,
+        })
+      : new URLSearchParams({
+          username,
+          message,
+          replyToId,
+          replyToMessage,
+        });
+  fetch(`http://localhost:3000/message?${searchParams}`, {
+    method: "POST",
+  });
 }
